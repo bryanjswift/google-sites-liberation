@@ -24,12 +24,11 @@ import org.w3c.dom.Element;
 
 /**
  * Implements FieldParser to parse an html element for a {@link Field}.
- * 
+ *
  * @author bsimon@google.com (Benjamin Simon)
  */
 final class FieldParserImpl implements FieldParser {
 
-  @Override
   public Field parseField(Element element) {
     checkNotNull(element);
     Field field = new Field();

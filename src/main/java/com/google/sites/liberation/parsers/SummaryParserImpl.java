@@ -24,14 +24,13 @@ import com.google.gdata.data.TextConstruct;
 import org.w3c.dom.Element;
 
 /**
- * Implements SummaryParser to parse an html element representing an entry 
+ * Implements SummaryParser to parse an html element representing an entry
  * summary.
- * 
+ *
  * @author bsimon@google.com (Benjamin Simon)
  */
 final class SummaryParserImpl implements SummaryParser {
-  
-  @Override
+
   public TextConstruct parseSummary(Element element) {
     checkNotNull(element);
     return new PlainTextConstruct(element.getTextContent());

@@ -25,14 +25,13 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 
 /**
- * Implements {@link AppendableFactory} to provide a 
+ * Implements {@link AppendableFactory} to provide a
  * {@code BufferedWriter} for a given file name.
- * 
+ *
  * @author bsimon@google.com (Benjamin Simon)
  */
 final class BufferedWriterFactory implements AppendableFactory {
-  
-  @Override
+
   public Appendable getAppendable(File file) throws IOException {
     checkNotNull(file);
     return new BufferedWriter(new OutputStreamWriter(

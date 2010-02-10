@@ -24,12 +24,11 @@ import java.util.List;
 
 /**
  * Renders the links to a page's ancestors.
- * 
+ *
  * @author bsimon@google.com (Benjamin Simon)
  */
 final class CommentsRendererImpl implements CommentsRenderer {
 
-  @Override
   public XmlElement renderComments(List<CommentEntry> comments) {
     XmlElement div = new XmlElement("div");
     XmlElement bold = new XmlElement("b");
