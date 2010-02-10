@@ -19,32 +19,28 @@ package com.google.sites.liberation.util;
 /**
  * Implementation of ProgressListener that uses standard out to report the
  * progress of an operation.
- * 
+ *
  * @author bsimon@google.com (Benjamin Simon)
  */
 public class StdOutProgressListener implements ProgressListener {
 
   private double progress;
   private String status;
-  
-  @Override
+
   public void setProgress(double progress) {
     this.progress = progress;
     System.out.println("Current progress: " + (int)(progress*100) + "%.");
   }
 
-  @Override
   public void setStatus(String status) {
     this.status = status;
     System.out.println(status);
   }
 
-  @Override
   public double getProgress() {
     return progress;
   }
 
-  @Override
   public String getStatus() {
     return status;
   }
