@@ -29,6 +29,7 @@ import com.google.gdata.data.sites.BaseContentEntry;
 import com.google.gdata.data.sites.BasePageEntry;
 import com.google.gdata.util.common.base.Nullable;
 import com.google.inject.Inject;
+import com.google.sites.liberation.util.EntryUtils;
 import com.google.sites.liberation.util.ProgressListener;
 import com.google.sites.liberation.util.UrlUtils;
 
@@ -120,9 +121,12 @@ final class SiteExporterImpl implements SiteExporter {
     int totalEntries = pages.size() + attachments.size();
     if (totalEntries > 0) {
       int currentEntries = 0;
-      for (BasePageEntry<?> page : pages) {
+      for (BasePageEntry<?> p : pages) {
         progressListener.setStatus("Exporting page: "
-            + page.getTitle().getPlainText() + '.');
+            + p.getTitle().getPlainText() + '.');
+				String content = EntryUtils.getXhtmlContent(p);
+				content.length();
+				BasePageEntry<?> page = com.knovel.export.XhtmlCleanup.process(p);
         linkConverter.convertLinks(page, entryStore, siteUrl, false);
         File relativePath = getPath(page, entryStore);
         if (relativePath != null) {

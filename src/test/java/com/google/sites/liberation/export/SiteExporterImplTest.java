@@ -148,7 +148,7 @@ public class SiteExporterImplTest {
     page.setTitle(new PlainTextConstruct("Page 1"));
     page.setPageName(new PageName("Page-1"));
     XmlBlob blob = new XmlBlob();
-    blob.setBlob("content");
+    blob.setBlob("<div>content</div>");
     page.setContent(new XhtmlTextConstruct(blob));
     final BaseContentEntry<?> attachment = new AttachmentEntry();
     attachment.setId("2");
