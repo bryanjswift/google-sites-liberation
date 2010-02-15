@@ -2,7 +2,7 @@ package com.knovel.export
 
 import com.google.gdata.data.sites.BasePageEntry
 import com.google.sites.liberation.util.EntryUtils
-import scala.xml.{Elem,Node,NodeSeq,XML}
+import scala.xml.{Elem,Node,XML}
 import scala.xml.transform.{RewriteRule,RuleTransformer}
 
 object XhtmlCleanup {
