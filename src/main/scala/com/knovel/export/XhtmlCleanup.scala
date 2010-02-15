@@ -9,7 +9,7 @@ object XhtmlCleanup {
 	def process(entry:BasePageEntry[_]) = {
 		val content = EntryUtils.getXhtmlContent(entry)
 		val block = XML.loadString(content)
-		val result = cleanFontTags(block)
+		val result = cleanEmptyLinks(cleanFontTags(block))
 		EntryUtils.setContent(entry, result.toString)
 		entry
 	}
