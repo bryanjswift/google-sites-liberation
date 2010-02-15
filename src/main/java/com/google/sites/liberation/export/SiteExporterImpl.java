@@ -29,7 +29,6 @@ import com.google.gdata.data.sites.BaseContentEntry;
 import com.google.gdata.data.sites.BasePageEntry;
 import com.google.gdata.util.common.base.Nullable;
 import com.google.inject.Inject;
-import com.google.sites.liberation.util.EntryUtils;
 import com.google.sites.liberation.util.ProgressListener;
 import com.google.sites.liberation.util.UrlUtils;
 
@@ -38,6 +37,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -81,9 +82,9 @@ final class SiteExporterImpl implements SiteExporter {
   }
 
   @Override
-  public void exportSite(String host, @Nullable String domain, String webspace,
-      boolean exportRevisions, SitesService sitesService, File rootDirectory, 
-      ProgressListener progressListener) {
+  public void exportSite(final String host, @Nullable final String domain, final String webspace,
+      final boolean exportRevisions, final SitesService sitesService, final File rootDirectory,
+      final ProgressListener progressListener) {
     checkNotNull(host, "host");
     checkNotNull(webspace, "webspace");
     checkNotNull(sitesService, "sitesService");
@@ -91,9 +92,9 @@ final class SiteExporterImpl implements SiteExporter {
     checkNotNull(progressListener, "progressListener");
     Set<BasePageEntry<?>> pages = Sets.newHashSet();
     Set<AttachmentEntry> attachments = Sets.newHashSet();
-    EntryStore entryStore = entryStoreFactory.newEntryStore();
-    URL feedUrl = UrlUtils.getFeedUrl(host, domain, webspace);
-    URL siteUrl = UrlUtils.getSiteUrl(host, domain, webspace);
+    final EntryStore entryStore = entryStoreFactory.newEntryStore();
+    final URL feedUrl = UrlUtils.getFeedUrl(host, domain, webspace);
+    final URL siteUrl = UrlUtils.getSiteUrl(host, domain, webspace);
 
     progressListener.setStatus("Retrieving site data (this may take a few minutes).");
     Iterable<BaseContentEntry<?>> entries =
@@ -117,16 +118,19 @@ final class SiteExporterImpl implements SiteExporter {
         LOGGER.log(Level.WARNING, "Error parsing entries!");
       }
     }
+    final int totalEntries = pages.size() + attachments.size();
+		ExecutorService exec = Executors.newFixedThreadPool(4);
 
-    int totalEntries = pages.size() + attachments.size();
-    if (totalEntries > 0) {
-      int currentEntries = 0;
-      for (BasePageEntry<?> p : pages) {
-        progressListener.setStatus("Exporting page: "
-            + p.getTitle().getPlainText() + '.');
-				String content = EntryUtils.getXhtmlContent(p);
-				content.length();
-				BasePageEntry<?> page = com.knovel.export.XhtmlCleanup.process(p);
+		class PageRunnable implements Runnable {
+			int currentEntries;
+			final BasePageEntry<?> page;
+			public PageRunnable(int currentEntries, BasePageEntry<?> page) {
+				this.currentEntries = currentEntries;
+				this.page = page;
+			}
+			public void run() {
+        progressListener.setStatus("Exporting page: " + page.getTitle().getPlainText() + '.');
+				com.knovel.export.XhtmlCleanup.process(page);
         linkConverter.convertLinks(page, entryStore, siteUrl, false);
         File relativePath = getPath(page, entryStore);
         if (relativePath != null) {
@@ -138,7 +142,23 @@ final class SiteExporterImpl implements SiteExporter {
                 sitesService, siteUrl);
           }
         }
+        progressListener.setStatus("Finished page: " + page.getTitle().getPlainText() + '.');
+        updateProgress();
+			}
+			public synchronized void updateProgress() {
         progressListener.setProgress(((double) ++currentEntries) / totalEntries);
+			}
+		}
+		class FinishRunnable implements Runnable {
+			public void run() {
+      	progressListener.setStatus("Export complete.");
+			}
+		}
+
+    if (totalEntries > 0) {
+      int currentEntries = 0;
+      for (BasePageEntry<?> page : pages) {
+				exec.execute(new PageRunnable(currentEntries,page));
       }
       for (AttachmentEntry attachment : attachments) {
         progressListener.setStatus("Downloading attachment: "
@@ -146,12 +166,13 @@ final class SiteExporterImpl implements SiteExporter {
         downloadAttachment(attachment, rootDirectory, entryStore, sitesService);
         progressListener.setProgress(((double) ++currentEntries) / totalEntries);
       }
-      progressListener.setStatus("Export complete.");
+			exec.execute(new FinishRunnable());
     } else {
       progressListener.setStatus("No data returned. You may have provided "
           + "invalid Site information or credentials.");
     }
   }
+
 
   private void exportPage(BasePageEntry<?> page, File directory,
       EntryStore entryStore, boolean revisionsExported) {
