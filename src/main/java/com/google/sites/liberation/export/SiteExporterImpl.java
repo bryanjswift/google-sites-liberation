@@ -81,6 +81,23 @@ final class SiteExporterImpl implements SiteExporter {
     this.revisionsExporter = checkNotNull(revisionsExporter);
   }
 
+  private class ProgressUpdater {
+    private final int totalEntries;
+    private final ProgressListener progressListener;
+    private int current = 0;
+    public ProgressUpdater(int totalEntries, ProgressListener progressListener) {
+      this.totalEntries = totalEntries;
+      this.progressListener = progressListener;
+    }
+    public synchronized void increment() {
+      current = current + 1;
+      if (current == totalEntries) {
+        progressListener.setStatus("Export Finished.");
+      }
+      progressListener.setProgress(((double) current) / totalEntries);
+    }
+  }
+
   @Override
   public void exportSite(final String host, @Nullable final String domain, final String webspace,
       final boolean exportRevisions, final SitesService sitesService, final File rootDirectory,
@@ -119,18 +136,17 @@ final class SiteExporterImpl implements SiteExporter {
       }
     }
     final int totalEntries = pages.size() + attachments.size();
-		ExecutorService exec = Executors.newFixedThreadPool(4);
+    final ProgressUpdater updater = new ProgressUpdater(totalEntries,progressListener);
+    ExecutorService exec = Executors.newFixedThreadPool(4);
 
-		class PageRunnable implements Runnable {
-			final int entryNumber;
-			final BasePageEntry<?> page;
-			public PageRunnable(int entryNumber, BasePageEntry<?> page) {
-				this.entryNumber = entryNumber;
-				this.page = page;
-			}
-			public void run() {
+    class PageRunnable implements Runnable {
+      final BasePageEntry<?> page;
+      public PageRunnable(BasePageEntry<?> page) {
+        this.page = page;
+      }
+      public void run() {
         progressListener.setStatus("Exporting page: " + page.getTitle().getPlainText() + '.');
-				com.knovel.export.XhtmlCleanup.process(page);
+        com.knovel.export.XhtmlCleanup.process(page);
         linkConverter.convertLinks(page, entryStore, siteUrl, false);
         File relativePath = getPath(page, entryStore);
         if (relativePath != null) {
@@ -142,36 +158,30 @@ final class SiteExporterImpl implements SiteExporter {
                 sitesService, siteUrl);
           }
         }
-        progressListener.setStatus("Finished page (" + entryNumber + " / " + totalEntries + "): " + page.getTitle().getPlainText() + '.');
-        updateProgress();
-			}
-			public synchronized void updateProgress() {
-        progressListener.setProgress(((double) entryNumber) / totalEntries);
-			}
-		}
-		class DownloadRunnable implements Runnable {
-			final int entryNumber;
-			final AttachmentEntry attachment;
-			public DownloadRunnable(int entryNumber, AttachmentEntry attachment) {
-				this.entryNumber = entryNumber;
-				this.attachment = attachment;
-			}
-			public void run() {
-        progressListener.setStatus("Downloading attachment: "
-            + attachment.getTitle().getPlainText() + '.');
+        progressListener.setStatus("Finished page: " + page.getTitle().getPlainText() + '.');
+        updater.increment();
+      }
+    }
+    class DownloadRunnable implements Runnable {
+      final AttachmentEntry attachment;
+      public DownloadRunnable(AttachmentEntry attachment) {
+        this.attachment = attachment;
+      }
+      public void run() {
+        progressListener.setStatus("Downloading attachment: " + attachment.getTitle().getPlainText() + '.');
         downloadAttachment(attachment, rootDirectory, entryStore, sitesService);
-        progressListener.setProgress(((double) entryNumber) / totalEntries);
-			}
-		}
+        updater.increment();
+      }
+    }
 
     if (totalEntries > 0) {
-			progressListener.setStatus("Exporting " + totalEntries + " total pages");
+      progressListener.setStatus("Exporting " + totalEntries + " total pages");
       int entryNumber = 0;
       for (BasePageEntry<?> page : pages) {
-				exec.execute(new PageRunnable(++entryNumber,page));
+        exec.execute(new PageRunnable(page));
       }
       for (AttachmentEntry attachment : attachments) {
-				exec.execute(new DownloadRunnable(++entryNumber,attachment));
+        exec.execute(new DownloadRunnable(attachment));
       }
     } else {
       progressListener.setStatus("No data returned. You may have provided "
