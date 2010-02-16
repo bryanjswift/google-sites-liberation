@@ -12,7 +12,7 @@ class XhtmlCleanupTest extends TestCase {
 				<font><a href="test.html">This is some text</a></font>
 				<p><font>More text</font></p>
 			</div>
-		val result = XhtmlCleanup.cleanFontTags(div)
+		val result = XhtmlCleanup.clean(div)
 		assertEquals(0,(result \\ "font").length)
 		assertEquals("This is some text",(result \ "a").text)
 		assertEquals("More text",(result \ "p").text)
@@ -23,7 +23,7 @@ class XhtmlCleanupTest extends TestCase {
 				<font><a href="test.html"></a>This is some text</font>
 				<p><a href="test.html" />More text</p>
 			</div>
-		val result = XhtmlCleanup.cleanEmptyLinks(div)
+		val result = XhtmlCleanup.clean(div)
 		assertEquals(0,(result \\ "a").length)
 		assertEquals("This is some text",(result \ "font").text)
 		assertEquals("More text",(result \ "p").text)
