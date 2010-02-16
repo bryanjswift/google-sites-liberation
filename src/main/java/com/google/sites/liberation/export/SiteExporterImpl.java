@@ -122,10 +122,10 @@ final class SiteExporterImpl implements SiteExporter {
 		ExecutorService exec = Executors.newFixedThreadPool(4);
 
 		class PageRunnable implements Runnable {
-			int currentEntries;
+			final int entryNumber;
 			final BasePageEntry<?> page;
-			public PageRunnable(int currentEntries, BasePageEntry<?> page) {
-				this.currentEntries = currentEntries;
+			public PageRunnable(int entryNumber, BasePageEntry<?> page) {
+				this.entryNumber = entryNumber;
 				this.page = page;
 			}
 			public void run() {
@@ -142,31 +142,37 @@ final class SiteExporterImpl implements SiteExporter {
                 sitesService, siteUrl);
           }
         }
-        progressListener.setStatus("Finished page: " + page.getTitle().getPlainText() + '.');
+        progressListener.setStatus("Finished page (" + entryNumber + " / " + totalEntries + "): " + page.getTitle().getPlainText() + '.');
         updateProgress();
 			}
 			public synchronized void updateProgress() {
-        progressListener.setProgress(((double) ++currentEntries) / totalEntries);
+        progressListener.setProgress(((double) entryNumber) / totalEntries);
 			}
 		}
-		class FinishRunnable implements Runnable {
+		class DownloadRunnable implements Runnable {
+			final int entryNumber;
+			final AttachmentEntry attachment;
+			public DownloadRunnable(int entryNumber, AttachmentEntry attachment) {
+				this.entryNumber = entryNumber;
+				this.attachment = attachment;
+			}
 			public void run() {
-      	progressListener.setStatus("Export complete.");
+        progressListener.setStatus("Downloading attachment: "
+            + attachment.getTitle().getPlainText() + '.');
+        downloadAttachment(attachment, rootDirectory, entryStore, sitesService);
+        progressListener.setProgress(((double) entryNumber) / totalEntries);
 			}
 		}
 
     if (totalEntries > 0) {
-      int currentEntries = 0;
+			progressListener.setStatus("Exporting " + totalEntries + " total pages");
+      int entryNumber = 0;
       for (BasePageEntry<?> page : pages) {
-				exec.execute(new PageRunnable(currentEntries,page));
+				exec.execute(new PageRunnable(++entryNumber,page));
       }
       for (AttachmentEntry attachment : attachments) {
-        progressListener.setStatus("Downloading attachment: "
-            + attachment.getTitle().getPlainText() + '.');
-        downloadAttachment(attachment, rootDirectory, entryStore, sitesService);
-        progressListener.setProgress(((double) ++currentEntries) / totalEntries);
+				exec.execute(new DownloadRunnable(++entryNumber,attachment));
       }
-			exec.execute(new FinishRunnable());
     } else {
       progressListener.setStatus("No data returned. You may have provided "
           + "invalid Site information or credentials.");
