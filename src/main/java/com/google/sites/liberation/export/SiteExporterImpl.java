@@ -146,7 +146,7 @@ final class SiteExporterImpl implements SiteExporter {
       }
       public void run() {
         progressListener.setStatus("Exporting page: " + page.getTitle().getPlainText() + '.');
-        com.knovel.export.XhtmlCleanup.process(page);
+        XhtmlCleanup.process(page);
         linkConverter.convertLinks(page, entryStore, siteUrl, false);
         File relativePath = getPath(page, entryStore);
         if (relativePath != null) {

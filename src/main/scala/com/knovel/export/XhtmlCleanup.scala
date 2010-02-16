@@ -1,4 +1,4 @@
-package com.knovel.export
+package com.google.sites.liberation.export
 
 import com.google.gdata.data.sites.BasePageEntry
 import com.google.sites.liberation.util.EntryUtils

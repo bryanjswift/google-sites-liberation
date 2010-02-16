@@ -1,4 +1,4 @@
-package com.knovel.export
+package com.google.sites.liberation.export
 
 import junit.framework.TestCase
 import org.junit.Assert._
