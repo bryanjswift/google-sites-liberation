@@ -176,7 +176,6 @@ final class SiteExporterImpl implements SiteExporter {
 
     if (totalEntries > 0) {
       progressListener.setStatus("Exporting " + totalEntries + " total pages");
-      int entryNumber = 0;
       for (BasePageEntry<?> page : pages) {
         exec.execute(new PageRunnable(page));
       }
