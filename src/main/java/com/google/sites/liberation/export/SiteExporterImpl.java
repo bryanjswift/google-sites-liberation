@@ -146,7 +146,7 @@ final class SiteExporterImpl implements SiteExporter {
       }
       public void run() {
         progressListener.setStatus("Exporting page: " + page.getTitle().getPlainText() + '.');
-        XhtmlCleanup.process(page);
+        XhtmlCleanup.apply(page);
         linkConverter.convertLinks(page, entryStore, siteUrl, false);
         File relativePath = getPath(page, entryStore);
         if (relativePath != null) {
