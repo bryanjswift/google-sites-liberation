@@ -97,6 +97,41 @@ final class SiteExporterImpl implements SiteExporter {
       progressListener.setProgress(((double) current) / totalEntries);
     }
   }
+    class PageRunnable implements Runnable {
+      final BasePageEntry<?> page;
+      public PageRunnable(BasePageEntry<?> page) {
+        this.page = page;
+      }
+      public void run() {
+        progressListener.setStatus("Exporting page: " + page.getTitle().getPlainText() + '.');
+				// This is definitely the bit that causes slowdown on some pages
+        com.knovel.export.XhtmlCleanup.process(page);
+        linkConverter.convertLinks(page, entryStore, siteUrl, false);
+        File relativePath = getPath(page, entryStore);
+        if (relativePath != null) {
+          File directory = new File(rootDirectory, relativePath.getPath());
+          directory.mkdirs();
+          exportPage(page, directory, entryStore, exportRevisions);
+          if (exportRevisions) {
+            revisionsExporter.exportRevisions(page, entryStore, directory,
+                sitesService, siteUrl);
+          }
+        }
+        progressListener.setStatus("Finished page: " + page.getTitle().getPlainText() + '.');
+        updater.increment();
+      }
+    }
+    class DownloadRunnable implements Runnable {
+      final AttachmentEntry attachment;
+      public DownloadRunnable(AttachmentEntry attachment) {
+        this.attachment = attachment;
+      }
+      public void run() {
+        progressListener.setStatus("Downloading attachment: " + attachment.getTitle().getPlainText() + '.');
+        downloadAttachment(attachment, rootDirectory, entryStore, sitesService);
+        updater.increment();
+      }
+    }
 
   @Override
   public void exportSite(final String host, @Nullable final String domain, final String webspace,
@@ -138,41 +173,6 @@ final class SiteExporterImpl implements SiteExporter {
     final int totalEntries = pages.size() + attachments.size();
     final ProgressUpdater updater = new ProgressUpdater(totalEntries,progressListener);
     ExecutorService exec = Executors.newFixedThreadPool(4);
-
-    class PageRunnable implements Runnable {
-      final BasePageEntry<?> page;
-      public PageRunnable(BasePageEntry<?> page) {
-        this.page = page;
-      }
-      public void run() {
-        progressListener.setStatus("Exporting page: " + page.getTitle().getPlainText() + '.');
-        com.knovel.export.XhtmlCleanup.process(page);
-        linkConverter.convertLinks(page, entryStore, siteUrl, false);
-        File relativePath = getPath(page, entryStore);
-        if (relativePath != null) {
-          File directory = new File(rootDirectory, relativePath.getPath());
-          directory.mkdirs();
-          exportPage(page, directory, entryStore, exportRevisions);
-          if (exportRevisions) {
-            revisionsExporter.exportRevisions(page, entryStore, directory,
-                sitesService, siteUrl);
-          }
-        }
-        progressListener.setStatus("Finished page: " + page.getTitle().getPlainText() + '.');
-        updater.increment();
-      }
-    }
-    class DownloadRunnable implements Runnable {
-      final AttachmentEntry attachment;
-      public DownloadRunnable(AttachmentEntry attachment) {
-        this.attachment = attachment;
-      }
-      public void run() {
-        progressListener.setStatus("Downloading attachment: " + attachment.getTitle().getPlainText() + '.');
-        downloadAttachment(attachment, rootDirectory, entryStore, sitesService);
-        updater.increment();
-      }
-    }
 
     if (totalEntries > 0) {
       progressListener.setStatus("Exporting " + totalEntries + " total pages");
